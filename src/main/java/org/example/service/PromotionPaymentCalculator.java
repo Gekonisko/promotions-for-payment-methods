@@ -6,7 +6,9 @@ import org.example.model.PaymentMethod;
 import org.example.utils.PercentageUtils;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 
 public class PromotionPaymentCalculator implements PaymentCalculator {
@@ -17,7 +19,7 @@ public class PromotionPaymentCalculator implements PaymentCalculator {
     public BillResult calculate(Bill  bill) {
         applyFullDiscountPayments(bill);
         applyLoyaltyPayments(bill);
-        //payRemainingOrders(bill);
+        payRemainingOrders(bill);
 
         return bill.getBillResult();
     }
@@ -76,17 +78,27 @@ public class PromotionPaymentCalculator implements PaymentCalculator {
 
             payments.forEach(payment -> bill.addPayment(order, payment, payment.getLimit()));
 
-            paymentMethods = bill.getRemainingPaymentMethods().stream()
-                    .filter(payment -> "PUNKTY".equalsIgnoreCase(payment.getId()))
-                    .toList();
+            paymentMethods = bill.getRemainingPaymentMethods();
         }
     }
 
     private List<PaymentMethod> findApplicablePaymentMethods(Bill bill, Order order, List<PaymentMethod> paymentMethods) {
+        var amountToPay = order.value.subtract(bill.getPaidAmount(order));
+        BigDecimal paidAmount = BigDecimal.ZERO;
+        List<PaymentMethod> applicablePaymentMethods = new ArrayList<>();
 
+        var sortedPayments = paymentMethods.stream()
+                .sorted(Comparator.comparing(PaymentMethod::getRemainingAmount).reversed())
+                .toList();
 
+        for (PaymentMethod payment : sortedPayments) {
+            paidAmount = paidAmount.add(payment.getRemainingAmount());
+            applicablePaymentMethods.add(payment);
 
-        return List.of();
+            if (paidAmount.compareTo(amountToPay) >= 0) break;
+        }
+
+        return applicablePaymentMethods;
     }
 
     private List<Order> availableOrdersForTenPercentDiscount(BigDecimal points, Collection<Order> orders) {

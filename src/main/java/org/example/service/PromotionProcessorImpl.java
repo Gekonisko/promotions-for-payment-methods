@@ -23,7 +23,8 @@ public class PromotionProcessorImpl implements PromotionProcessor {
                 return getPromotion(order.value, paymentAmount, 10);
         }
         // Rabaty z używania karty banku
-        else if(order.promotions.contains(paymentMethod.getId()) &&
+        else if(order.promotions != null &&
+                order.promotions.contains(paymentMethod.getId()) &&
                 paidAmount.equals(BigDecimal.ZERO) &&
                 paymentAmount.compareTo(order.value) == 0) {
             return getPromotion(order.value, paymentAmount, paymentMethod.getDiscount());

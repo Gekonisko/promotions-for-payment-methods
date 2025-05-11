@@ -19,5 +19,6 @@ public interface Bill {
     BillResult getBillResult ();
     List<Order> getUnpaidOrders();
     List<PaymentMethod> getRemainingPaymentMethods();
+    BigDecimal getPaidAmount(Order order);
 
 }

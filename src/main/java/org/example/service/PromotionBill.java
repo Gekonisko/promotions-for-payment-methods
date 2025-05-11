@@ -92,14 +92,16 @@ public class PromotionBill implements Bill {
                 .collect(Collectors.toList());
     }
 
-    private BigDecimal getPaidAmount(Order order) {
+    @Override
+    public BigDecimal getPaidAmount(Order order) {
         return paidOrders.get(order.id).stream().map(PaymentResult::getFullPaidAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private BigDecimal calculateApplicableAmount(Order order, PaymentMethod paymentMethod, BigDecimal paymentAmount) {
         var availableMoney = paymentMethod.getLimit().subtract(paymentMethod.getMoneySpent());
+        var amountToPay = order.value.subtract(getPaidAmount(order));
 
-        return Stream.of(paymentAmount, availableMoney, order.value)
+        return Stream.of(paymentAmount, availableMoney, amountToPay)
                 .min(Comparator.naturalOrder())
                 .orElse(BigDecimal.ZERO);
     }
