@@ -1,3 +1,5 @@
+# Jakub_Ocytko_Java_Krakow
+
 # 💳 Payment System
 
 Aplikacja w języku **Java 17**, która przetwarza zamówienia (`Order`) oraz metody płatności (`PaymentMethod`), obliczając końcowy koszt po zastosowaniu promocji i limitów płatności.
