@@ -8,6 +8,8 @@ public class Order implements Comparable<Order>{
     public BigDecimal value;
     public List<String> promotions;
 
+    Order(){}
+
     public Order(String id, BigDecimal value, List<String> promotions){
         this.id = id;
         this.value = value;

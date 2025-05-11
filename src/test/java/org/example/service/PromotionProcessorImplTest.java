@@ -2,6 +2,7 @@ package org.example.service;
 
 import org.example.model.Order;
 import org.example.model.PaymentMethod;
+import org.example.model.PromotionResult;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -17,9 +18,9 @@ public class PromotionProcessorImplTest {
         Order order = new Order("ORDER1", new BigDecimal("100"), List.of("CARD"));
         PaymentMethod method = new PaymentMethod("CARD", 20, new BigDecimal("100"));
 
-        BigDecimal result = processor.process(order, method, new BigDecimal("100"), BigDecimal.ZERO);
+        PromotionResult result = processor.process(order, method, new BigDecimal("100"), BigDecimal.ZERO);
 
-        assertEquals(new BigDecimal("80.00"), result);
+        assertEquals(new BigDecimal("80.00"), result.getFinalAmount());
     }
 
     @Test
@@ -27,9 +28,9 @@ public class PromotionProcessorImplTest {
         Order order = new Order("ORDER1", new BigDecimal("100"), List.of("PUNKTY"));
         PaymentMethod method = new PaymentMethod("PUNKTY", 15, new BigDecimal("100"));
 
-        BigDecimal result = processor.process(order, method, new BigDecimal("20"), BigDecimal.ZERO);
+        PromotionResult result = processor.process(order, method, new BigDecimal("20"), BigDecimal.ZERO);
 
-        assertEquals(new BigDecimal("90.00"), result); // 15% rabat za punkty
+        assertEquals(new BigDecimal("20"), result.getFinalAmount()); // 15% rabat za punkty
     }
 
     @Test
@@ -37,9 +38,9 @@ public class PromotionProcessorImplTest {
         Order order = new Order("ORDER1", new BigDecimal("100"), List.of("PUNKTY"));
         PaymentMethod method = new PaymentMethod("PUNKTY", 15, new BigDecimal("100"));
 
-        BigDecimal result = processor.process(order, method, new BigDecimal("100"), BigDecimal.ZERO);
+        PromotionResult result = processor.process(order, method, new BigDecimal("100"), BigDecimal.ZERO);
 
-        assertEquals(new BigDecimal("85.00"), result); // rabat PUNKTY zamiast 10%
+        assertEquals(new BigDecimal("85.00"), result.getFinalAmount()); // rabat PUNKTY zamiast 10%
     }
 
     @Test
@@ -47,9 +48,9 @@ public class PromotionProcessorImplTest {
         Order order = new Order("ORDER1", new BigDecimal("100"), List.of("PUNKTY"));
         PaymentMethod method = new PaymentMethod("PUNKTY", 15, new BigDecimal("100"));
 
-        BigDecimal result = processor.process(order, method, new BigDecimal("5"), BigDecimal.ZERO);
+        PromotionResult result = processor.process(order, method, new BigDecimal("5.00"), BigDecimal.ZERO);
 
-        assertEquals(new BigDecimal("100.00"), result); // brak rabatu
+        assertEquals(new BigDecimal("5.00"), result.getFinalAmount()); // brak rabatu
     }
 
     @Test
@@ -57,8 +58,8 @@ public class PromotionProcessorImplTest {
         Order order = new Order("ORDER1", new BigDecimal("100"), List.of("INNY_BANK"));
         PaymentMethod method = new PaymentMethod("CARD", 20, new BigDecimal("100"));
 
-        BigDecimal result = processor.process(order, method, new BigDecimal("100"), BigDecimal.ZERO);
+        PromotionResult result = processor.process(order, method, new BigDecimal("100"), BigDecimal.ZERO);
 
-        assertEquals(new BigDecimal("100"), result); // brak zgodności – brak rabatu
+        assertEquals(new BigDecimal("100"), result.getFinalAmount()); // brak zgodności – brak rabatu
     }
 }

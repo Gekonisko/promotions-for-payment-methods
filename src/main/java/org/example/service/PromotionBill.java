@@ -1,71 +1,106 @@
 package org.example.service;
 
-import org.example.model.Order;
-import org.example.model.PaymentMethod;
-import org.example.model.PaymentResult;
+import org.example.model.*;
 
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class PromotionBill implements Bill {
-    List<Order> orders;
+    Map<String, Order> orders;
     Map<String, List<PaymentResult>> paidOrders;
 
-    List<PaymentMethod> paymentMethods;
-    Map<String, BigDecimal> moneySpent;
+    Map<String, PaymentMethod> paymentMethods;
 
     PromotionProcessor promotionProcessor;
 
     public PromotionBill(List<Order> orders, List<PaymentMethod> paymentMethods, PromotionProcessor promotionProcessor) {
-        this.orders = orders;
-        this.paymentMethods = paymentMethods;
+        this.orders = orders.stream().collect(Collectors.toMap(
+                order -> order.id,
+                order -> order
+        ));
+        this.paymentMethods = paymentMethods.stream().collect(Collectors.toMap(
+                PaymentMethod::getId,
+                payment -> payment
+        ));
+
 
         paidOrders = orders.stream().collect(Collectors.toMap(
                 order -> order.id,
                 order -> new ArrayList<>()
         ));
 
-        moneySpent = paymentMethods.stream().collect(Collectors.toMap(
-                payment -> payment.id,
-                payment -> BigDecimal.ZERO
-        ));
-
         this.promotionProcessor = promotionProcessor;
     }
 
     @Override
-    public List<Order> getOrders() {
-        return orders;
+    public Collection<Order> getOrders() {
+        return orders.values();
     }
 
     @Override
-    public List<PaymentMethod> getPaymentMethods() {
-        return paymentMethods;
+    public Order getOrder(String orderId) {
+        return orders.get(orderId);
     }
 
-    public void addPayment(Order order, PaymentMethod paymentMethod) {
-        var amount = getAvailableAmount(order, paymentMethod);
+    @Override
+    public Collection<PaymentMethod> getPaymentMethods() {
+        return paymentMethods.values();
+    }
+
+    @Override
+    public PaymentMethod getPaymentMethod(String paymentId) {
+        return paymentMethods.get(paymentId);
+    }
+
+    @Override
+    public void addPayment(Order order, PaymentMethod paymentMethod, BigDecimal paymentAmount) {
+        var amount = calculateApplicableAmount(order, paymentMethod, paymentAmount);
 
         if(amount.compareTo(BigDecimal.ZERO) == 0) return;
 
-        var amountAfterPromotion = promotionProcessor.process(order, paymentMethod, amount, getPaidAmount(order));
+        PromotionResult promotionResult = promotionProcessor.process(order, paymentMethod, amount, getPaidAmount(order));
 
-        moneySpent.put(paymentMethod.id, amountAfterPromotion);
-        paidOrders.get(order.id).add(new PaymentResult(order, paymentMethod, amountAfterPromotion));
+        paymentMethods.get(paymentMethod.getId()).addMoneySpent(promotionResult.getFinalAmount());
+        paidOrders.get(order.id).add(new PaymentResult(order, paymentMethod, promotionResult.getFinalAmount(), promotionResult.getDiscountAmount()));
     }
 
     @Override
-    public List<PaymentResult> getBillResult() {
-        return paidOrders.values().stream().flatMap(List::stream).collect(Collectors.toList());
+    public BillResult getBillResult() {
+        var payments = paidOrders.values().stream().flatMap(List::stream).collect(Collectors.toList());
+        return new BillResult(payments);
+    }
+
+    @Override
+    public List<Order> getUnpaidOrders() {
+        var unpaidOrders = new ArrayList<Order>();
+        for (Map.Entry<String, List<PaymentResult>> entry : paidOrders.entrySet()) {
+            var sum = entry.getValue().stream().map(PaymentResult::getFullPaidAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+            var order = orders.get(entry.getKey());
+
+            if(sum.compareTo(order.value) < 0)
+                unpaidOrders.add(order);
+        }
+        return unpaidOrders;
+    }
+
+    @Override
+    public List<PaymentMethod> getRemainingPaymentMethods() {
+        return getPaymentMethods().stream()
+                .filter(paymentMethod -> paymentMethod.getRemainingAmount().compareTo(BigDecimal.ZERO) > 0)
+                .collect(Collectors.toList());
     }
 
     private BigDecimal getPaidAmount(Order order) {
-        return paidOrders.get(order.id).stream().map(paymentResult -> paymentResult.paidAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return paidOrders.get(order.id).stream().map(PaymentResult::getFullPaidAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private BigDecimal getAvailableAmount(Order order, PaymentMethod paymentMethod) {
-        var availableMoney = paymentMethod.limit.subtract(moneySpent.get(paymentMethod.id));
-        return availableMoney.compareTo(order.value) < 0 ? availableMoney : order.value;
+    private BigDecimal calculateApplicableAmount(Order order, PaymentMethod paymentMethod, BigDecimal paymentAmount) {
+        var availableMoney = paymentMethod.getLimit().subtract(paymentMethod.getMoneySpent());
+
+        return Stream.of(paymentAmount, availableMoney, order.value)
+                .min(Comparator.naturalOrder())
+                .orElse(BigDecimal.ZERO);
     }
 }

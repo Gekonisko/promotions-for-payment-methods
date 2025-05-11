@@ -5,14 +5,16 @@ import java.math.RoundingMode;
 import java.util.Objects;
 
 public class PaymentResult {
-    public String paymentId;
-    public String orderId;
-    public BigDecimal paidAmount;
+     String paymentId;
+     String orderId;
+     BigDecimal paidAmount;
+     BigDecimal discountAmount;
 
-    public PaymentResult(Order order, PaymentMethod paymentMethod, BigDecimal amount) {
+    public PaymentResult(Order order, PaymentMethod paymentMethod, BigDecimal paidAmount, BigDecimal discountAmount) {
         paymentId = paymentMethod.id;
         orderId = order.id;
-        paidAmount = amount;
+        this.paidAmount = paidAmount;
+        this.discountAmount = discountAmount;
     }
 
     public PaymentResult(String paymentId, String orderId, BigDecimal paidAmount) {
@@ -27,6 +29,14 @@ public class PaymentResult {
 
     public String getOrderId() {
         return orderId;
+    }
+
+    public BigDecimal getPaidAmount() {
+        return paidAmount;
+    }
+
+    public BigDecimal getFullPaidAmount() {
+        return paidAmount.add(discountAmount);
     }
 
     @Override

@@ -28,6 +28,6 @@ public class Main {
         Bill bill = new PromotionBill(orders, paymentMethods, promotionProcessor);
         PaymentCalculator calculator = new PromotionPaymentCalculator();
 
-        calculator.calculate(bill).forEach(System.out::println);
+        System.out.println(calculator.calculate(bill));
     }
 }

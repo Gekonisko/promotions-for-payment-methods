@@ -1,5 +1,6 @@
 package org.example.service;
 
+import org.example.model.BillResult;
 import org.example.model.Order;
 import org.example.model.PaymentMethod;
 import org.example.model.PaymentResult;
@@ -23,11 +24,13 @@ public class PromotionPaymentCalculatorTest {
         PaymentCalculator calculator = new PromotionPaymentCalculator();
 
         // When
-        List<PaymentResult> results = calculator.calculate(bill);
+        BillResult results = calculator.calculate(bill);
 
         // Then
-        assertEquals(1, results.size());
-        assertEquals(new BigDecimal("90.00"), results.get(0).paidAmount);
+        BillResult expectedResult = new BillResult(List.of(
+                new PaymentResult("promo-1", "o1", new BigDecimal("90.00")))
+        );
+        assertEquals(expectedResult, results);
     }
 
     @Test
@@ -49,28 +52,17 @@ public class PromotionPaymentCalculatorTest {
         PaymentCalculator calculator = new PromotionPaymentCalculator();
 
         // When
-        List<PaymentResult> results = calculator.calculate(bill);
+        BillResult results = calculator.calculate(bill);
 
         // Then
-        var comparator = Comparator.comparing(PaymentResult::getPaymentId)
-                .thenComparing(PaymentResult::getOrderId);
-
-        List<PaymentResult> expectedResults = List.of(
+        BillResult expectedResult = new BillResult(List.of(
                 new PaymentResult("BosBankrut", "ORDER2", new BigDecimal("190.00")),
                 new PaymentResult("mZysk", "ORDER3", new BigDecimal("135.00")),
                 new PaymentResult("PUNKTY", "ORDER1", new BigDecimal("85.00")),
                 new PaymentResult("PUNKTY", "ORDER4", new BigDecimal("15.00")),
                 new PaymentResult("mZysk", "ORDER4", new BigDecimal("30.00"))
-        );
+        ));
 
-        assertEquals(expectedResults.size(), results.size());
-        assertEquals(expectedResults.stream()
-                .sorted(comparator)
-                .toList(),
-
-                results.stream()
-                        .sorted(comparator)
-                        .toList()
-        );
+        assertEquals(expectedResult, results);
     }
 }

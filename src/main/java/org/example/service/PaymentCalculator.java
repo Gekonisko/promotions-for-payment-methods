@@ -1,9 +1,7 @@
 package org.example.service;
 
-import org.example.model.PaymentResult;
-
-import java.util.List;
+import org.example.model.BillResult;
 
 public interface PaymentCalculator {
-    List<PaymentResult> calculate(Bill bill);
+    BillResult calculate(Bill bill);
 }
