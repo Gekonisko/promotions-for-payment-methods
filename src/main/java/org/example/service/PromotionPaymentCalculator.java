@@ -37,6 +37,8 @@ public class PromotionPaymentCalculator implements PaymentCalculator {
 
     private void applyLoyaltyPayments(Bill bill) {
         var pointsPayments = bill.getPaymentMethod("PUNKTY");
+        if(pointsPayments == null) return;
+
         var points = pointsPayments.getRemainingAmount();
 
         var unpaidOrders = bill.getUnpaidOrders();
