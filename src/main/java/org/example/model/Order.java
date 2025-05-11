@@ -4,9 +4,9 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public class Order implements Comparable<Order>{
-    public String id;
-    public BigDecimal value;
-    public List<String> promotions;
+    String id;
+    BigDecimal value;
+    List<String> promotions;
 
     Order(){}
 
@@ -14,6 +14,18 @@ public class Order implements Comparable<Order>{
         this.id = id;
         this.value = value;
         this.promotions = promotions;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public BigDecimal getValue() {
+        return value;
+    }
+
+    public List<String> getPromotions() {
+        return promotions;
     }
 
     @Override

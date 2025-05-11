@@ -17,7 +17,7 @@ public class PromotionBill implements Bill {
 
     public PromotionBill(List<Order> orders, List<PaymentMethod> paymentMethods, PromotionProcessor promotionProcessor) {
         this.orders = orders.stream().collect(Collectors.toMap(
-                order -> order.id,
+                Order::getId,
                 order -> order
         ));
         this.paymentMethods = paymentMethods.stream().collect(Collectors.toMap(
@@ -27,7 +27,7 @@ public class PromotionBill implements Bill {
 
 
         paidOrders = orders.stream().collect(Collectors.toMap(
-                order -> order.id,
+                Order::getId,
                 order -> new ArrayList<>()
         ));
 
@@ -63,7 +63,7 @@ public class PromotionBill implements Bill {
         PromotionResult promotionResult = promotionProcessor.process(order, paymentMethod, amount, getPaidAmount(order));
 
         paymentMethods.get(paymentMethod.getId()).addMoneySpent(promotionResult.getFinalAmount());
-        paidOrders.get(order.id).add(new PaymentResult(order, paymentMethod, promotionResult.getFinalAmount(), promotionResult.getDiscountAmount()));
+        paidOrders.get(order.getId()).add(new PaymentResult(order, paymentMethod, promotionResult.getFinalAmount(), promotionResult.getDiscountAmount()));
     }
 
     @Override
@@ -79,7 +79,7 @@ public class PromotionBill implements Bill {
             var sum = entry.getValue().stream().map(PaymentResult::getFullPaidAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
             var order = orders.get(entry.getKey());
 
-            if(sum.compareTo(order.value) < 0)
+            if(sum.compareTo(order.getValue()) < 0)
                 unpaidOrders.add(order);
         }
         return unpaidOrders;
@@ -94,12 +94,12 @@ public class PromotionBill implements Bill {
 
     @Override
     public BigDecimal getPaidAmount(Order order) {
-        return paidOrders.get(order.id).stream().map(PaymentResult::getFullPaidAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return paidOrders.get(order.getId()).stream().map(PaymentResult::getFullPaidAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private BigDecimal calculateApplicableAmount(Order order, PaymentMethod paymentMethod, BigDecimal paymentAmount) {
         var availableMoney = paymentMethod.getLimit().subtract(paymentMethod.getMoneySpent());
-        var amountToPay = order.value.subtract(getPaidAmount(order));
+        var amountToPay = order.getValue().subtract(getPaidAmount(order));
 
         return Stream.of(paymentAmount, availableMoney, amountToPay)
                 .min(Comparator.naturalOrder())

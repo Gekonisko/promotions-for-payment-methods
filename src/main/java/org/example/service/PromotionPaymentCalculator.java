@@ -6,17 +6,14 @@ import org.example.model.PaymentMethod;
 import org.example.utils.PercentageUtils;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 
 public class PromotionPaymentCalculator implements PaymentCalculator {
 
     public PromotionPaymentCalculator() {}
 
     @Override
-    public BillResult calculate(Bill  bill) {
+    public BillResult calculate(Bill bill) {
         applyFullDiscountPayments(bill);
         applyLoyaltyPayments(bill);
         payRemainingOrders(bill);
@@ -25,13 +22,24 @@ public class PromotionPaymentCalculator implements PaymentCalculator {
     }
 
     private void applyFullDiscountPayments(Bill bill) {
-        List<PaymentMethod> paymentsSortedByDiscount = bill.getPaymentMethods().stream().sorted().toList();
-        var unpaidOrders = bill.getUnpaidOrders();
+        List<Order> availableOrders = new ArrayList<>(bill.getUnpaidOrders());
 
-        for (PaymentMethod payment : paymentsSortedByDiscount) {
-            var availableOrders = availableOrders(payment, unpaidOrders);
-            var maxOrder = availableOrders.stream().max(Order::compareTo);
-            maxOrder.ifPresent(order -> bill.addPayment(order, payment, payment.getLimit()));
+        List<PaymentMethod> sortedMethods = bill.getPaymentMethods().stream()
+                .sorted(Comparator.comparingInt(PaymentMethod::getDiscount).reversed())
+                .toList();
+
+        for (PaymentMethod paymentMethod : sortedMethods) {
+            List<Order> matchingOrders = availableOrders(paymentMethod, availableOrders);
+
+            Optional<Order> bestOrder = matchingOrders.stream()
+                    .max(Comparator.comparing(order ->
+                            PercentageUtils.calculateDiscountAmount(order.getValue(), paymentMethod.getDiscount()))
+                    );
+
+            bestOrder.ifPresent(order -> {
+                bill.addPayment(order, paymentMethod, paymentMethod.getLimit());
+                availableOrders.remove(order);
+            });
         }
     }
 
@@ -45,7 +53,7 @@ public class PromotionPaymentCalculator implements PaymentCalculator {
         var ordersForDiscount = availableOrdersForTenPercentDiscount(points, unpaidOrders).stream().sorted().toList();
 
         for (Order order : ordersForDiscount) {
-            var discountAmount = PercentageUtils.calculateDiscountAmount(order.value, 10);
+            var discountAmount = PercentageUtils.calculateDiscountAmount(order.getValue(), 10);
             if(points.compareTo(discountAmount) >= 0)
             {
                 bill.addPayment(order, pointsPayments, points);
@@ -85,7 +93,7 @@ public class PromotionPaymentCalculator implements PaymentCalculator {
     }
 
     private List<PaymentMethod> findApplicablePaymentMethods(Bill bill, Order order, List<PaymentMethod> paymentMethods) {
-        var amountToPay = order.value.subtract(bill.getPaidAmount(order));
+        var amountToPay = order.getValue().subtract(bill.getPaidAmount(order));
         BigDecimal paidAmount = BigDecimal.ZERO;
         List<PaymentMethod> applicablePaymentMethods = new ArrayList<>();
 
@@ -105,7 +113,7 @@ public class PromotionPaymentCalculator implements PaymentCalculator {
 
     private List<Order> availableOrdersForTenPercentDiscount(BigDecimal points, Collection<Order> orders) {
         return orders.stream()
-                .filter(order -> PercentageUtils.calculateDiscountAmount(order.value, 10).compareTo(points) <= 0)
+                .filter(order -> PercentageUtils.calculateDiscountAmount(order.getValue(), 10).compareTo(points) <= 0)
                 .toList();
     }
 
@@ -117,13 +125,16 @@ public class PromotionPaymentCalculator implements PaymentCalculator {
 
     private List<Order> availableOrdersForCreditCards(PaymentMethod paymentMethod, Collection<Order> orders) {
         return orders.stream()
-                .filter((order -> order.promotions != null && order.promotions.contains(paymentMethod.getId()) && order.value.min(paymentMethod.getLimit()).equals(order.value)))
+                .filter((order ->
+                        order.getPromotions() != null &&
+                        order.getPromotions().contains(paymentMethod.getId()) &&
+                        order.getValue().min(paymentMethod.getLimit()).equals(order.getValue())))
                 .toList();
     }
 
     private List<Order> availableOrdersForPoints(PaymentMethod paymentMethod, Collection<Order> orders) {
         return orders.stream()
-                .filter((order -> order.value.min(paymentMethod.getLimit()).equals(order.value)))
+                .filter((order -> order.getValue().min(paymentMethod.getLimit()).equals(order.getValue())))
                 .toList();
     }
 }
